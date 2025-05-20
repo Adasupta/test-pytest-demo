@@ -25,6 +25,7 @@ env:
   QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
   QASE_TESTOPS_RUN_COMPLETE: true
   QASE_MODE: "testops"
+  QASE_TESTOPS_PLAN_ID: 5
 
 jobs:
   test:
