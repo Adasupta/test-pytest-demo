@@ -1,0 +1,101 @@
+name: Run Example tests
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+env:
+  QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
+  QASE_TESTOPS_PROJECT: ${{ vars.QASE_TESTOPS_PROJECT }}
+  QASE_TESTOPS_RUN_COMPLETE: true
+
+jobs:
+  create-test-run:
+    runs-on: ubuntu-latest
+    outputs:
+      run-id: ${{ steps.qase-run-create.outputs.id }}
+    steps:
+      - name: Create a Qase test run
+        id: qase-run-create
+        uses: qase-tms/gh-actions/run-create@v2
+        with:
+          token: ${{ secrets.QASE_API_TOKEN }}
+          project: ${{ vars.QASE_TESTOPS_PROJECT }}
+          title: Automated Test Run from GitHub Actions
+          description: |
+            This test run was triggered by a GitHub Actions workflow.
+          plan: ${{ vars.QASE_TESTOPS_PLAN_ID }}
+
+  run-tests:
+    needs: create-test-run
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        worker-id: [1, 2]
+    env:
+      QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
+      QASE_TESTOPS_PROJECT: ${{ vars.QASE_TESTOPS_PROJECT }}
+      QASE_TESTOPS_RUN_ID: ${{ needs.create-test-run.outputs.run-id }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install-deps
+          playwright install webkit
+
+      - name: Split tests for Worker ${{ matrix.worker-id }}
+        id: split
+        run: |
+          TEST_LIST=$(pytest --collect-only -q tests/ | grep "::" | sort)
+          echo "$TEST_LIST" > all_tests.txt
+          TOTAL=$(wc -l < all_tests.txt)
+          HALF=$(( (TOTAL + 1) / 2 ))
+
+          if [ "${{ matrix.worker-id }}" == "1" ]; then
+            head -n "$HALF" all_tests.txt > selected_tests.txt
+          else
+            tail -n +"$((HALF + 1))" all_tests.txt > selected_tests.txt
+          fi
+
+          cat selected_tests.txt
+          echo "SELECTED_TESTS=$(paste -sd' ' selected_tests.txt)" >> $GITHUB_ENV
+
+      - name: Run Pytest tests for Worker ${{ matrix.worker-id }}
+        run: |
+          echo "Running tests for Worker ${{ matrix.worker-id }}"
+          QASE_MODE=testops pytest $SELECTED_TESTS --qase-run-id $QASE_TESTOPS_RUN_ID
+
+  complete-test-run:
+    needs: run-tests
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Complete the Qase test run
+        uses: qase-tms/gh-actions/run-complete@v2
+        with:
+          token: ${{ secrets.QASE_API_TOKEN }}
+          project: ${{ vars.QASE_TESTOPS_PROJECT }}
+          id: ${{ needs.create-test-run.outputs.run-id }}
