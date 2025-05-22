@@ -25,7 +25,7 @@ jobs:
     steps:
       - name: Create a Qase test run
         id: qase-run-create
-        uses: qase-tms/gh-actions/run-create@v2
+        uses: qase-tms/gh-actions/run-create@v1
         with:
           token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ vars.QASE_TESTOPS_PROJECT }}
@@ -95,7 +95,7 @@ jobs:
     if: always()
     steps:
       - name: Complete the Qase test run
-        uses: qase-tms/gh-actions/run-complete@v2
+        uses: qase-tms/gh-actions/run-complete@v1
         with:
           token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ vars.QASE_TESTOPS_PROJECT }}
