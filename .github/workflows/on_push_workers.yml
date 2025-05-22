@@ -15,7 +15,6 @@ env:
   QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
   QASE_TESTOPS_PROJECT: ${{ vars.QASE_TESTOPS_PROJECT }}
   QASE_TESTOPS_RUN_COMPLETE: true
-  QASE_MODE: testops
 
 jobs:
   create-test-run:
@@ -40,6 +39,7 @@ jobs:
       matrix:
         worker-id: [1, 2]
     env:
+      QASE_MODE: testops
       QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
       QASE_TESTOPS_PROJECT: ${{ vars.QASE_TESTOPS_PROJECT }}
       QASE_TESTOPS_RUN_ID: ${{ needs.create-test-run.outputs.run-id }}
@@ -61,9 +61,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies
+      - name: Install dependencies including Qase plugin
         run: |
           pip install -r requirements.txt
+          pip install qase-pytest
           playwright install-deps
           playwright install webkit
 
@@ -87,7 +88,7 @@ jobs:
       - name: Run Pytest tests for Worker ${{ matrix.worker-id }}
         run: |
           echo "Running tests for Worker ${{ matrix.worker-id }}"
-          QASE_MODE=testops pytest $SELECTED_TESTS --qase-run-id $QASE_TESTOPS_RUN_ID
+          pytest $SELECTED_TESTS
 
   complete-test-run:
     needs: run-tests
