@@ -3,10 +3,10 @@ from qase.pytest import qase
 
 
 # First test using parametrization to check different values.
+@pytest.mark.parametrize("Parameter", ["Value 1", "Value 2"])
 @qase.id(
     476
 )
-@pytest.mark.parametrize("Parameter", ["Value 1", "Value 2"])
 def test_with_parameter(Parameter: str):
     """
     This test checks the system's reaction to different parameter values. In this case,
