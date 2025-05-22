@@ -26,39 +26,6 @@ class Test_Priority:
     def test_priority_high(self):
         assert True, "Test failed with priority: high"
 
-
-class Test_Severity:
-    @qase.title("Test case with field: Severity - trivial")
-    @qase.severity("trivial")
-    def test_severity_trivial(self):
-        assert True, "Test failed with severity: trivial"
-
-    @qase.title("Test case with field: Severity - minor")
-    @qase.severity("minor")
-    def test_severity_minor(self):
-        assert True, "Test failed with severity: minor"
-
-    @qase.title("Test case with field: Severity - normal")
-    @qase.severity("normal")
-    def test_severity_normal(self):
-        assert True, "Test failed with severity: normal"
-
-    @qase.title("Test case with field: Severity - major")
-    @qase.severity("major")
-    def test_severity_major(self):
-        assert True, "Test failed with severity: major"
-
-    @qase.title("Test case with field: Severity - critical")
-    @qase.severity("critical")
-    def test_severity_critical(self):
-        assert True, "Test failed with severity: critical"
-
-    @qase.title("Test case with field: Severity - blocker")
-    @qase.severity("blocker")
-    def test_severity_blocker(self):
-        assert True, "Test failed with severity: blocker"
-
-
 class Test_Layer:
     @qase.title("Test case with field: Layer - e2e")
     @qase.layer("e2e")
