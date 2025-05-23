@@ -1,4 +1,4 @@
-name: Run Pytest with xdist on separate runners
+name: Run Pytest with xdist-like parallelism on separate runners
 
 on:
   push:
@@ -9,8 +9,8 @@ on:
 env:
   QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
   QASE_TESTOPS_PROJECT: ${{ vars.QASE_TESTOPS_PROJECT }}
-  QASE_TESTOPS_RUN_COMPLETE: true
   QASE_TESTOPS_PLAN_ID: 5
+  QASE_TESTOPS_RUN_COMPLETE: true
 
 jobs:
   create-test-run:
@@ -25,22 +25,23 @@ jobs:
           token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ vars.QASE_TESTOPS_PROJECT }}
           title: Automated Test Run from GitHub Actions
-          description: This test run was triggered by a GitHub Actions workflow.
+          description: Pytest w x-dist
           plan: ${{ vars.QASE_TESTOPS_PLAN_ID }}
 
   run-tests:
     needs: create-test-run
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        runner: [1, 2]    # two parallel jobs, two runners, isolated CPU resources
-    runs-on: ubuntu-latest
+        worker: [1, 2]  # Two parallel jobs, each gets its own runner
     env:
       QASE_MODE: testops
       QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
       QASE_TESTOPS_PROJECT: ${{ vars.QASE_TESTOPS_PROJECT }}
       QASE_TESTOPS_PLAN_ID: ${{ vars.QASE_TESTOPS_PLAN_ID }}
       QASE_TESTOPS_RUN_ID: ${{ needs.create-test-run.outputs.run-id }}
-      
+      WORKER_ID: ${{ matrix.worker }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -58,17 +59,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies including pytest-xdist and Qase plugin
+      - name: Install dependencies including Qase and pytest-xdist
         run: |
           pip install -r requirements.txt
           pip install qase-pytest pytest-xdist
           playwright install-deps
           playwright install webkit
 
-      - name: Run Pytest on Worker ${{ matrix.runner }}
+      - name: Run Pytest on Worker ${{ matrix.worker }} with dynamic test splitting
         run: |
-          echo "Running tests on runner ${{ matrix.runner }}"
-          pytest -n 1 --browser chromium
+          echo "Running tests on worker ${{ matrix.worker }}"
+          pytest --dist=loadscope -n 2 --tx $((2 - ${{ matrix.worker }}))p/localhost --browser chromium
 
   complete-test-run:
     needs: run-tests
