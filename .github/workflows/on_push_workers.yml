@@ -1,30 +1,45 @@
-name: Run Example test
+name: Run Pytest with xdist on separate runners
 
 on:
   push:
     branches:
       - main
-
-  pull_request:
-    branches:
-      - main
-
   workflow_dispatch:
 
 env:
   QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
   QASE_TESTOPS_PROJECT: ${{ vars.QASE_TESTOPS_PROJECT }}
   QASE_TESTOPS_RUN_COMPLETE: true
+  QASE_TESTOPS_PLAN_ID: 5
 
 jobs:
+  create-test-run:
+    runs-on: ubuntu-latest
+    outputs:
+      run-id: ${{ steps.qase-run-create.outputs.id }}
+    steps:
+      - name: Create a Qase test run
+        id: qase-run-create
+        uses: qase-tms/gh-actions/run-create@v1
+        with:
+          token: ${{ secrets.QASE_API_TOKEN }}
+          project: ${{ vars.QASE_TESTOPS_PROJECT }}
+          title: Automated Test Run from GitHub Actions
+          description: This test run was triggered by a GitHub Actions workflow.
+          plan: ${{ env.QASE_TESTOPS_PLAN_ID }}
 
   run-tests:
+    needs: create-test-run
+    strategy:
+      matrix:
+        runner: [1, 2]    # two parallel jobs, two runners, isolated CPU resources
     runs-on: ubuntu-latest
     env:
       QASE_MODE: testops
       QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
       QASE_TESTOPS_PROJECT: ${{ vars.QASE_TESTOPS_PROJECT }}
-      QASE_TESTOPS_PLAN_ID: ${{ vars.QASE_TESTOPS_PLAN_ID }}
+      QASE_TESTOPS_PLAN_ID: ${{ env.QASE_TESTOPS_PLAN_ID }}
+      QASE_TESTOPS_RUN_ID: ${{ needs.create-test-run.outputs.run-id }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -42,18 +57,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies including Qase plugin
+      - name: Install dependencies including pytest-xdist and Qase plugin
         run: |
           pip install -r requirements.txt
-          pip install qase-pytest
-          pip install pytest-xdist
-          pip install pytest-rerunfailures
+          pip install qase-pytest pytest-xdist
           playwright install-deps
           playwright install webkit
 
-      - name: Run Pytest tests with xdist workers and browser chromium
+      - name: Run Pytest on Worker ${{ matrix.runner }}
         run: |
-          pytest -n 4 --browser chromium
+          echo "Running tests on runner ${{ matrix.runner }}"
+          pytest -n 1 --browser chromium
 
   complete-test-run:
     needs: run-tests
