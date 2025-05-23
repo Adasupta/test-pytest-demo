@@ -1,12 +1,14 @@
-name: Run Example test1
+name: Run Example test
 
 on:
   push:
     branches:
       - main
+
   pull_request:
     branches:
       - main
+
   workflow_dispatch:
 
 env:
@@ -26,7 +28,7 @@ jobs:
         with:
           token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ vars.QASE_TESTOPS_PROJECT }}
-          title: Automated Test w pytest x-dist and rerun
+          title: Automated Test Run from GitHub Actions
           description: |
             This test run was triggered by a GitHub Actions workflow.
           plan: ${{ vars.QASE_TESTOPS_PLAN_ID }}
@@ -36,11 +38,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       QASE_MODE: testops
-      QASE_TESTOPS_PLAN_ID: ${{ vars.QASE_TESTOPS_PLAN_ID }}
-      QASE_TESTOPS_RUN_ID: ${{ needs.create-test-run.outputs.run-id }}
       QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
       QASE_TESTOPS_PROJECT: ${{ vars.QASE_TESTOPS_PROJECT }}
-
+      QASE_TESTOPS_PLAN_ID: ${{ vars.QASE_TESTOPS_PLAN_ID }}
+      QASE_TESTOPS_RUN_ID: ${{ needs.create-test-run.outputs.run-id }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -58,17 +59,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies
+      - name: Install dependencies including Qase plugin
         run: |
           pip install -r requirements.txt
-          pip install qase-pytest pytest-xdist pytest-rerunfailures
+          pip install qase-pytest
+          pip install pytest-xdist
+          pip install pytest-rerunfailures
           playwright install-deps
           playwright install webkit
 
-      - name: Run tests in parallel with reruns
+      - name: Run Pytest tests with xdist workers and browser chromium
         run: |
-          echo "Running tests with xdist and rerunfailures plugin"
-          pytest -n auto --reruns 3 --reruns-delay 2
+          pytest -n 2 --browser chromium
 
   complete-test-run:
     needs: run-tests
