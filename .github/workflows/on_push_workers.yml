@@ -1,4 +1,4 @@
-name: Run Pytest with Qase & Xdist
+name: Run Example test
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
 env:
   QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
   QASE_TESTOPS_PROJECT: ${{ vars.QASE_TESTOPS_PROJECT }}
-  QASE_TESTOPS_PLAN_ID: ${{ vars.QASE_TESTOPS_PLAN_ID }}
+  QASE_TESTOPS_RUN_COMPLETE: true
 
 jobs:
   create-test-run:
@@ -20,27 +20,26 @@ jobs:
     outputs:
       run-id: ${{ steps.qase-run-create.outputs.id }}
     steps:
-      - name: Create Qase test run
+      - name: Create a Qase test run
         id: qase-run-create
         uses: qase-tms/gh-actions/run-create@v1
         with:
           token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ vars.QASE_TESTOPS_PROJECT }}
-          title: Automated Test Run from GitHub Actions pytest x-dist
+          title: Automated Test w pytest x-dist and rerun
           description: |
-            This test run was triggered by GitHub Actions
+            This test run was triggered by a GitHub Actions workflow.
           plan: ${{ vars.QASE_TESTOPS_PLAN_ID }}
-          QASE_TESTOPS_RUN_COMPLETE: true
 
   run-tests:
     needs: create-test-run
     runs-on: ubuntu-latest
     env:
       QASE_MODE: testops
-      QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
-      QASE_TESTOPS_PROJECT: ${{ vars.QASE_TESTOPS_PROJECT }}
       QASE_TESTOPS_PLAN_ID: ${{ vars.QASE_TESTOPS_PLAN_ID }}
       QASE_TESTOPS_RUN_ID: ${{ needs.create-test-run.outputs.run-id }}
+      QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
+      QASE_TESTOPS_PROJECT: ${{ vars.QASE_TESTOPS_PROJECT }}
 
     steps:
       - name: Checkout repository
@@ -62,21 +61,21 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install qase-pytest pytest-xdist
+          pip install qase-pytest pytest-xdist pytest-rerunfailures
           playwright install-deps
           playwright install webkit
 
-      - name: Run Pytest in parallel with xdist
+      - name: Run tests in parallel with reruns
         run: |
-          echo "Running tests with Qase using pytest-xdist"
-          pytest -n auto
+          echo "Running tests with xdist and rerunfailures plugin"
+          pytest -n auto --reruns 3 --reruns-delay 2
 
   complete-test-run:
     needs: run-tests
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Complete Qase test run
+      - name: Complete the Qase test run
         uses: qase-tms/gh-actions/run-complete@v1
         with:
           token: ${{ secrets.QASE_API_TOKEN }}
