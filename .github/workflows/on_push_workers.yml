@@ -1,4 +1,4 @@
-name: Run Pytest in Parallel on Separate Runners
+name: Run Pytest with xdist (Dynamic Parallelization)
 
 on:
   push:
@@ -24,16 +24,13 @@ jobs:
         with:
           token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ vars.QASE_TESTOPS_PROJECT }}
-          title: GitHub Actions Test Run
-          description: Triggered from GitHub
+          title: Automated Test Run from GitHub Actions
+          description: Triggered by GitHub Actions
           plan: ${{ vars.QASE_TESTOPS_PLAN_ID }}
 
   run-tests:
     needs: create-test-run
-    strategy:
-      matrix:
-        worker_id: [1, 2]  # This ensures 2 parallel runners
-    runs-on: ubuntu-latest  # Each job runs on its own runner (separate CPU)
+    runs-on: ubuntu-latest
     env:
       QASE_MODE: testops
       QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
@@ -47,19 +44,26 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.13"
+          python-version: 3.13
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install qase-pytest pytest-xdist pytest-rerunfailures pytest-playwright
+          pip install qase-pytest pytest-xdist pytest-rerunfailures
           playwright install-deps
           playwright install chromium
 
-      - name: Run tests using xdist on Worker ${{ matrix.worker_id }}
+      - name: Run tests with xdist
         run: |
-          echo "Running on Worker ${{ matrix.worker_id }}"
-          pytest -n 2 --dist=loadscope --reruns 2 --browser chromium
+          pytest -n 2 --dist=loadscope --browser chromium
 
   complete-test-run:
     needs: run-tests
