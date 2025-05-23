@@ -1,6 +1,5 @@
 from qase.pytest import qase
 
-# This method is currently *NOT* supported. 
-# @qase.tags("tag1", "tag2")
+@qase.case_id(459)  # Replace 123 with your actual Qase test case ID
 def test_qase_tags():
-    assert True
+    assert False, "This test is intentionally failing for demonstration"
