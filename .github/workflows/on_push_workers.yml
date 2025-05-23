@@ -1,4 +1,4 @@
-name: Run Pytest with xdist-like parallelism on separate runners
+name: Run Pytest in Parallel on Separate Runners
 
 on:
   push:
@@ -18,65 +18,55 @@ jobs:
     outputs:
       run-id: ${{ steps.qase-run-create.outputs.id }}
     steps:
-      - name: Create a Qase test run
+      - name: Create Qase Test Run
         id: qase-run-create
         uses: qase-tms/gh-actions/run-create@v1
         with:
           token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ vars.QASE_TESTOPS_PROJECT }}
-          title: Automated Test Run from GitHub Actions
-          description: Pytest w x-dist
+          title: GitHub Actions Test Run
+          description: Triggered from GitHub
           plan: ${{ vars.QASE_TESTOPS_PLAN_ID }}
 
   run-tests:
     needs: create-test-run
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        worker: [1, 2]  # Two parallel jobs, each gets its own runner
+        worker_id: [1, 2]  # This ensures 2 parallel runners
+    runs-on: ubuntu-latest  # Each job runs on its own runner (separate CPU)
     env:
       QASE_MODE: testops
       QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
       QASE_TESTOPS_PROJECT: ${{ vars.QASE_TESTOPS_PROJECT }}
       QASE_TESTOPS_PLAN_ID: ${{ vars.QASE_TESTOPS_PLAN_ID }}
       QASE_TESTOPS_RUN_ID: ${{ needs.create-test-run.outputs.run-id }}
-      WORKER_ID: ${{ matrix.worker }}
-
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.13
+          python-version: "3.13"
 
-      - name: Cache Python dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies including Qase and pytest-xdist
+      - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install qase-pytest pytest-xdist
+          pip install qase-pytest pytest-xdist pytest-rerunfailures pytest-playwright
           playwright install-deps
-          playwright install webkit
+          playwright install chromium
 
-      - name: Run Pytest on Worker ${{ matrix.worker }} with dynamic test splitting
+      - name: Run tests using xdist on Worker ${{ matrix.worker_id }}
         run: |
-          echo "Running tests on worker ${{ matrix.worker }}"
-          pytest --dist=loadscope -n 2 --tx $((2 - ${{ matrix.worker }}))p/localhost --browser chromium
+          echo "Running on Worker ${{ matrix.worker_id }}"
+          pytest -n 2 --dist=loadscope --reruns 2 --browser chromium
 
   complete-test-run:
     needs: run-tests
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Complete the Qase test run
+      - name: Complete Qase Test Run
         uses: qase-tms/gh-actions/run-complete@v1
         with:
           token: ${{ secrets.QASE_API_TOKEN }}
