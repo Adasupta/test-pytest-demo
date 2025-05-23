@@ -1,20 +1,18 @@
-name: Run Example test
+name: Run Pytest with Qase & Xdist
 
 on:
   push:
     branches:
       - main
-
   pull_request:
     branches:
       - main
-
   workflow_dispatch:
 
 env:
   QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
   QASE_TESTOPS_PROJECT: ${{ vars.QASE_TESTOPS_PROJECT }}
-  QASE_TESTOPS_RUN_COMPLETE: true
+  QASE_TESTOPS_PLAN_ID: ${{ vars.QASE_TESTOPS_PLAN_ID }}
 
 jobs:
   create-test-run:
@@ -22,7 +20,7 @@ jobs:
     outputs:
       run-id: ${{ steps.qase-run-create.outputs.id }}
     steps:
-      - name: Create a Qase test run
+      - name: Create Qase test run
         id: qase-run-create
         uses: qase-tms/gh-actions/run-create@v1
         with:
@@ -30,22 +28,20 @@ jobs:
           project: ${{ vars.QASE_TESTOPS_PROJECT }}
           title: Automated Test Run from GitHub Actions
           description: |
-            This test run was triggered by a GitHub Actions workflow.
+            This test run was triggered by GitHub Actions
           plan: ${{ vars.QASE_TESTOPS_PLAN_ID }}
-          
+          QASE_TESTOPS_RUN_COMPLETE: true
+
   run-tests:
     needs: create-test-run
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        worker-id: [1, 2]
     env:
       QASE_MODE: testops
       QASE_TESTOPS_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
       QASE_TESTOPS_PROJECT: ${{ vars.QASE_TESTOPS_PROJECT }}
+      QASE_TESTOPS_PLAN_ID: ${{ vars.QASE_TESTOPS_PLAN_ID }}
       QASE_TESTOPS_RUN_ID: ${{ needs.create-test-run.outputs.run-id }}
-      
-      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -63,41 +59,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies including Qase plugin
+      - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install qase-pytest
+          pip install qase-pytest pytest-xdist
           playwright install-deps
           playwright install webkit
 
-      - name: Split tests for Worker ${{ matrix.worker-id }}
-        id: split
+      - name: Run Pytest in parallel with xdist
         run: |
-          TEST_LIST=$(pytest --collect-only -q tests/ | grep "::" | sort)
-          echo "$TEST_LIST" > all_tests.txt
-          TOTAL=$(wc -l < all_tests.txt)
-          HALF=$(( (TOTAL + 1) / 2 ))
-
-          if [ "${{ matrix.worker-id }}" == "1" ]; then
-            head -n "$HALF" all_tests.txt > selected_tests.txt
-          else
-            tail -n +"$((HALF + 1))" all_tests.txt > selected_tests.txt
-          fi
-
-          cat selected_tests.txt
-          echo "SELECTED_TESTS=$(paste -sd' ' selected_tests.txt)" >> $GITHUB_ENV
-
-      - name: Run Pytest tests for Worker ${{ matrix.worker-id }}
-        run: |
-          echo "Running tests for Worker ${{ matrix.worker-id }}"
-          pytest $SELECTED_TESTS
+          echo "Running tests with Qase using pytest-xdist"
+          pytest -n auto
 
   complete-test-run:
     needs: run-tests
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Complete the Qase test run
+      - name: Complete Qase test run
         uses: qase-tms/gh-actions/run-complete@v1
         with:
           token: ${{ secrets.QASE_API_TOKEN }}
