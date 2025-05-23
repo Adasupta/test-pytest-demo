@@ -53,7 +53,7 @@ jobs:
 
       - name: Run Pytest tests with xdist workers and browser chromium
         run: |
-          pytest -n 2 --browser chromium
+          pytest -n 4 --browser chromium
 
   complete-test-run:
     needs: run-tests
