@@ -17,24 +17,8 @@ env:
   QASE_TESTOPS_RUN_COMPLETE: true
 
 jobs:
-  create-test-run:
-    runs-on: ubuntu-latest
-    outputs:
-      run-id: ${{ steps.qase-run-create.outputs.id }}
-    steps:
-      - name: Create a Qase test run
-        id: qase-run-create
-        uses: qase-tms/gh-actions/run-create@v1
-        with:
-          token: ${{ secrets.QASE_API_TOKEN }}
-          project: ${{ vars.QASE_TESTOPS_PROJECT }}
-          title: Automated Test Run from GitHub Actions
-          description: |
-            This test run was triggered by a GitHub Actions workflow.
-          plan: ${{ vars.QASE_TESTOPS_PLAN_ID }}
 
   run-tests:
-    needs: create-test-run
     runs-on: ubuntu-latest
     env:
       QASE_MODE: testops
