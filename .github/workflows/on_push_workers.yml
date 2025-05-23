@@ -26,7 +26,7 @@ jobs:
         with:
           token: ${{ secrets.QASE_API_TOKEN }}
           project: ${{ vars.QASE_TESTOPS_PROJECT }}
-          title: Automated Test Run from GitHub Actions
+          title: Automated Test Run from GitHub Actions pytest x-dist
           description: |
             This test run was triggered by GitHub Actions
           plan: ${{ vars.QASE_TESTOPS_PLAN_ID }}
