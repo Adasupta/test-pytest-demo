@@ -13,7 +13,7 @@ jobs:
       # Your build and setup steps here
 
       - name: Run Qase Tests
-        uses: qase-tms/qase-cloud-ci-integrations/github@v1
+        uses: qase-tms/qase-cloud-ci-integrations@v1
         with:
           project_code: 'DEMO'
           api_token: ${{ secrets.QASE_API_TOKEN }}
