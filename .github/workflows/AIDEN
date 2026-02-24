@@ -17,5 +17,5 @@ jobs:
         with:
           project_code: 'DEMO'
           api_token: ${{ secrets.QASE_API_TOKEN }}
-          run_title: 'GitHub Actions Run'
+          run_title: 'GitHub Actions Run-1'
           case_ids: '1050'
