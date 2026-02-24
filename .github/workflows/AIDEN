@@ -1,0 +1,21 @@
+name: Qase Test Run
+
+on:
+  push:
+    branches: main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # Your build and setup steps here
+
+      - name: Run Qase Tests
+        uses: qase-tms/qase-cloud-ci-integrations/github@v1
+        with:
+          project_code: 'DEMO'
+          api_token: ${{ secrets.QASE_API_TOKEN }}
+          run_title: 'GitHub Actions Run'
+          case_ids: '1050'
