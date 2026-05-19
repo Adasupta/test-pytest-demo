@@ -1,4 +1,4 @@
-name: Pytest Parallel Test Split with Separate Runners
+name: Pytest Parallel Test Split with Separate Runner
 
 on:
   push:
