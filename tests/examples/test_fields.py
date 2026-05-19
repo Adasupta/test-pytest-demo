@@ -10,22 +10,6 @@ def load_markdown_content():
 markdowncontent = load_markdown_content()
 
 
-class Test_Priority:
-    @qase.title("Test case with field: Priority - low")
-    @qase.priority("low")
-    def test_priority_low(self):
-        assert True, "Test failed with priority: low"
-
-    @qase.title("Test case with field: Priority - medium")
-    @qase.priority("medium")
-    def test_priority_medium(self):
-        assert True, "Test failed with priority: medium"
-
-    @qase.title("Test case with field: Priority - high")
-    @qase.priority("high")
-    def test_priority_high(self):
-        assert True, "Test failed with priority: high"
-
 class Test_Layer:
     @qase.title("Test case with field: Layer - e2e")
     @qase.layer("e2e")
@@ -69,7 +53,6 @@ class Test_All_Fields:
     @qase.fields(
         ("severity", "normal"),
         ("custom_field", "value"),
-        ("priority", "high"),
         ("layer", "unit"),
         ("description", "Try logging to Qase TestOps using login and password"),
         ("preconditions", "*Precondition 1*. Markdown is supported."),
